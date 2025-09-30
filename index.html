@@ -1,0 +1,847 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vrakie — Bon d’intervention</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+
+  <style>
+    :root{
+      --brand-red:#B31217;
+      --brand-red-dark:#7E0D11;
+      --brand-green:#00A651;       
+      --brand-blue:#0071BC;       
+      --brand-gray:#4A5568;
+
+      --bg-top:#0B0D12; --bg-bottom:#141824; --card:#161A25;
+      --text:#E8ECF1; --muted:#9AA3B2;
+      --field:#11151F; --line:#283147; --danger:#FF6B6B;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--text); background:linear-gradient(180deg,var(--bg-top),var(--bg-bottom));
+    }
+    .container{max-width:1100px; margin:0 auto; padding:24px 20px 48px}
+    .title-wrap{display:flex; align-items:center; justify-content:center; gap:14px; margin:12px 0 18px}
+    .brand-logo{
+      width:220px; height:52px; background:var(--logo-url) center/contain no-repeat; flex:0 0 auto; filter: drop-shadow(0 1px 0 rgba(0,0,0,.25));
+    }
+    .title{font-size:28px; font-weight:700; text-align:center; margin:0}
+    .subtitle{color:var(--muted); font-size:13px; text-align:center; margin-top:6px}
+    .card{background:var(--card); border-radius:24px; padding:22px; box-shadow:0 10px 30px rgba(0,0,0,.3)}
+    .ribbon{height:6px; margin:-6px -6px 16px;
+      background:linear-gradient(90deg,var(--brand-red),var(--brand-red-dark)); border-radius:6px}
+    .grid{display:grid; gap:14px; grid-template-columns: 1fr 1fr}
+    @media (max-width: 860px){ .grid{grid-template-columns:1fr} }
+    label.small{font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+    input, select, textarea, .field{
+      width:100%; background:var(--field); border:1px solid var(--line);
+      color:var(--text); border-radius:14px; padding:12px 14px; font-size:14px;
+    }
+    textarea{min-height:120px; resize:vertical}
+    .row{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+    @media (max-width: 640px){ .row{grid-template-columns:1fr} }
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center;
+      border:none; color:#fff; font-weight:700; font-size:16px; padding:14px 18px;
+      border-radius:16px; cursor:pointer; transition:transform .08s ease, opacity .2s;
+      user-select:none; gap:8px;
+    }
+    .btn:active{transform:scale(.98)}
+    .btn-primary{background:linear-gradient(135deg,var(--brand-red),var(--brand-red-dark)); box-shadow:0 6px 18px rgba(179,18,23,.35)}
+    .btn-ghost{background:#1F2937}
+    .btn-danger{background:var(--danger)}
+    .toolbar{display:flex; gap:12px; flex-wrap:wrap}
+    .section-title{font-weight:700; margin:10px 0 6px}
+    .divider{height:1px; background:var(--line); margin:10px 0 2px; border-radius:1px}
+    .sig-wrap{background:var(--field); border:1px dashed var(--line); border-radius:14px; padding:8px}
+    .sig-canvas{width:100%; height:230px; background:#0d111a; border-radius:10px; touch-action:none}
+    .sig-actions{margin-top:8px; display:flex; gap:10px; justify-content:flex-end}
+    .stars{display:grid; grid-template-columns:repeat(10,1fr); gap:4px; user-select:none}
+    .star{font-size:28px; text-align:center; line-height:1; padding:8px 0; cursor:pointer; border-radius:10px}
+    .star.filled{color:var(--brand-red)}
+    .star:hover{background:rgba(255,255,255,.04)}
+    .note-caption{color:var(--muted); font-size:13px}
+    .hidden{display:none!important}
+
+    #pdf-template{position:fixed; left:-99999px; top:0; width:794px;background:#fff; color:#111; padding:28px}
+    .pdf-header{
+      color:#fff; display:flex; align-items:center; justify-content:space-between;
+      padding:10px 16px; border-radius:10px; background:linear-gradient(90deg,var(--brand-red-dark)); margin-bottom:14px
+    }
+    .pdf-head-left{display:flex; align-items:center; gap:12px}
+    .pdf-logo{width:210px; height:8px; background:var(--logo-url) center/contain no-repeat; filter: drop-shadow(0 1px 0 rgba(0,0,0,.25))}
+    .pdf-h1{font-size:20px; font-weight:700}
+    .pdf-meta{font-size:12px; opacity:.95}
+    .pdf-row{display:flex; gap:16px; margin:12px 0}
+    .pdf-col{flex:1}
+    .kv{display:flex; gap:10px; margin:6px 0}
+    .kv .k{min-width:140px; font-weight:700; color:#222}
+    .box{border:1px solid #e4e4e4; border-radius:8px; padding:12px; background:#fff}
+    .pdf-stars{font-size:16px; letter-spacing:2px; color:var(--brand-red)}
+    .sig-box{border:1px solid #ddd; border-radius:8px; height:90px; display:flex; align-items:center; justify-content:center; background:#fff}
+    .sig-box img{max-width:100%; max-height:82px}
+    .pdf-footer{
+      margin-top:14px; font-size:11px; color:#444; display:flex; justify-content:space-between; align-items:center
+    }
+    .pdf-footer .tagline{color:var(--brand-gray)}
+    .bar{height:4px; background:linear-gradient(90deg,var(--brand-red),var(--brand-blue),var(--brand-green)); border-radius:3px; margin-top:6px}
+    .photos-toolbar{display:flex; gap:10px; align-items:center; margin-top:8px}
+    .photos-grid{display:grid; gap:14px; margin-top:12px; grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+    .photo-card{border:1px solid var(--line); border-radius:14px; overflow:hidden; background:#0d111a;}
+    .photo-top{position:relative; background:#0b0f18; display:flex; align-items:center; justify-content:center; padding:8px;}
+    .photo-top img{max-width:100%; max-height:280px; width:auto; height:auto; object-fit:contain; background:#0b0f18; display:block}
+    .photo-del{position:absolute; top:8px; right:8px; background:rgba(0,0,0,.6); border:1px solid rgba(255,255,255,.25); color:#fff; font-size:12px; padding:4px 6px; border-radius:8px; cursor:pointer}
+    .photo-meta{padding:8px 10px; display:grid; gap:6px}
+    .photo-name{font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+    .photo-comment{background:#0f1420; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:10px 12px}
+    .pdf-photos-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+    .pdf-photo{border:1px solid #e4e4e4; border-radius:8px; background:#fff; display:flex; flex-direction:column; gap:6px; padding:8px}
+    .pdf-photo img{width:100%; height:auto; max-height:360px; object-fit:contain; background:#fff; display:block}
+    .pdf-caption{font-size:11px; color:#222; border-top:1px dashed #e4e4e4; padding-top:6px; white-space:pre-wrap}
+    .modal{position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.5); z-index:9999}
+    .modal.open{display:grid}
+    .modal-card{background:var(--card); border:1px solid var(--line); border-radius:20px; padding:18px; width:min(96vw,560px); box-shadow:0 10px 30px rgba(0,0,0,.5)}
+    .modal-title{font-weight:700; font-size:18px; margin:0 0 6px}
+    .modal-sub{color:var(--muted); font-size:13px; margin-bottom:12px}
+    .modal-row{display:grid; grid-template-columns:1fr; gap:10px}
+    .linkbox{background:#0f1420; border:1px solid var(--line); border-radius:12px; padding:10px; word-break:break-all; font-size:13px}
+    .qr-wrap{display:flex; justify-content:center; padding:10px 0}
+    .modal-actions{display:flex; gap:10px; justify-content:flex-end; margin-top:10px}
+    .warn{font-size:12px; color:#ffb020}
+    @media print{ #pdf-template{position:static; width:auto; padding:0} }
+    #handoffQR{
+  padding:12px;            
+  background:#fff;
+  border-radius:10px;
+}
+#handoffQR canvas{
+  display:block;
+  margin:0 auto;
+  image-rendering:pixelated;
+}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="title-wrap">
+      <h1 class="title">Bon d’intervention</h1>
+    </div>
+    <div class="card" id="card">
+      <div class="ribbon"></div>
+
+      <h3 class="section-title">Informations</h3>
+      <div class="divider"></div>
+
+      <div class="grid">
+        <div>
+          <label class="small" for="type">Type d'intervention</label>
+          <select id="type">
+            <option>Mise en service</option>
+            <option>Mise au point</option>
+            <option>Intervention</option>
+            <option>Contrôle machine</option>
+          </select>
+        </div>
+        <div>
+          <label class="small" for="date">Date</label>
+          <input id="date" type="date" />
+        </div>
+
+        <div>
+          <label class="small" for="client">Nom du client</label>
+          <input id="client" type="text" placeholder="Ex: Entreprise SA" />
+        </div>
+        <div>
+          <label class="small" for="adresse">Adresse</label>
+          <input id="adresse" type="text" placeholder="Rue, CP, Ville" />
+        </div>
+
+        <div>
+          <label class="small" for="appel">N° Appel</label>
+          <input id="appel" type="text" />
+        </div>
+        <div>
+          <label class="small" for="affaire">N° Affaire</label>
+          <input id="affaire" type="text" />
+        </div>
+
+        <div>
+          <label class="small" for="commande">N° Commande</label>
+          <input id="commande" type="text" />
+        </div>
+        <div>
+          <label class="small" for="km">Kilomètres</label>
+          <input id="km" type="number" inputmode="decimal" placeholder="Ex: 120" />
+        </div>
+      </div>
+
+      <h3 class="section-title" style="margin-top:16px">Temps & déplacements</h3>
+      <div class="divider"></div>
+
+      <div class="row">
+        <div>
+          <label class="small" for="arrivee">Heure d'arrivée</label>
+          <input id="arrivee" type="time" />
+        </div>
+        <div>
+          <label class="small" for="depart">Heure de départ</label>
+          <input id="depart" type="time" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label class="small" for="interventionH">Temps d'intervention (h)</label>
+          <input id="interventionH" type="text" inputmode="decimal" placeholder="Ex: 3.5" />
+        </div>
+        <div>
+          <label class="small" for="trajetH">Temps de trajet A/R (h)</label>
+          <input id="trajetH" type="text" inputmode="decimal" placeholder="Ex: 1.0" />
+        </div>
+      </div>
+
+      <h3 class="section-title" style="margin-top:16px">Observations</h3>
+      <div class="divider"></div>
+      <textarea id="observations" placeholder="Notes, actions réalisées, anomalies…"></textarea>
+      <div class="photos-toolbar">
+        <input id="photosInput" type="file" accept="image/*" multiple class="hidden" />
+        <button id="addPhotoBtn" class="btn btn-ghost" type="button">Ajouter des photos</button>
+        <div class="note-caption">PNG/JPG, plusieurs fichiers possibles</div>
+      </div>
+      <div id="photosList" class="photos-grid"></div>
+
+      <h3 class="section-title" style="margin-top:16px">Note du client</h3>
+      <div class="divider"></div>
+      <div class="row" style="align-items:center">
+        <div>
+          <div id="stars" class="stars" aria-label="Note sur 10"></div>
+          <div class="note-caption"><span id="noteLabel">Note : 0/10</span> — <span id="noteCaption">Aucune évaluation</span></div>
+        </div>
+        <div></div>
+      </div>
+
+      <h3 class="section-title" style="margin-top:16px">Signatures</h3>
+      <div class="divider"></div>
+
+      <div class="row">
+        <div>
+          <label class="small">Signature Client</label>
+          <div class="sig-wrap">
+            <canvas id="sigClient" class="sig-canvas"></canvas>
+            <div class="sig-actions">
+              <button class="btn btn-danger" type="button" id="clearClient">Effacer</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label class="small">Signature Technicien</label>
+          <div class="sig-wrap">
+            <canvas id="sigTech" class="sig-canvas"></canvas>
+            <div class="sig-actions">
+              <button class="btn btn-danger" type="button" id="clearTech">Effacer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider" style="margin-top:18px"></div>
+      <div class="toolbar" style="justify-content:space-between; margin-top:8px">
+        <div class="toolbar" style="gap:8px">
+          <button class="btn btn-ghost" type="button" id="exportBtn">Exporter JSON</button>
+          <input id="importInput" type="file" accept="application/json" class="hidden" />
+          <button class="btn btn-ghost" type="button" id="importBtn">Importer JSON</button>
+        </div>
+        <div class="toolbar" style="gap:8px">
+          <button class="btn btn-ghost" type="button" id="handoffBtn">Déplacer sur téléphone</button>
+          <button class="btn btn-ghost" type="button" id="previewBtn">Aperçu png</button>
+          <button class="btn btn-primary hidden" type="button" id="shareBtn">Partager (PNG)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="pdf-template">
+    <div class="pdf-header">
+      <div class="pdf-head-left">
+        <div class="pdf-h1">Rapport d’intervention</div>
+      </div>
+    </div>
+
+    <div class="pdf-row">
+      <div class="pdf-col box">
+        <div class="kv"><div class="k">Client</div><div id="p_client">—</div></div>
+        <div class="kv"><div class="k">Adresse</div><div id="p_adresse">—</div></div>
+        <div class="kv"><div class="k">Kilomètres</div><div id="p_km">—</div></div>
+      </div>
+      <div class="pdf-col box">
+        <div class="kv"><div class="k">Type</div><div id="p_type">—</div></div>
+        <div class="kv"><div class="k">Date</div><div id="p_date">—</div></div>
+        <div class="kv"><div class="k">N° Appel</div><div id="p_appel">—</div></div>
+        <div class="kv"><div class="k">N° Affaire</div><div id="p_affaire">—</div></div>
+        <div class="kv"><div class="k">N° Commande</div><div id="p_commande">—</div></div>
+      </div>
+    </div>
+
+    <div class="pdf-row">
+      <div class="pdf-col box">
+        <div class="kv"><div class="k">Arrivée</div><div id="p_arrivee">—</div></div>
+        <div class="kv"><div class="k">Départ</div><div id="p_depart">—</div></div>
+      </div>
+      <div class="pdf-col box">
+        <div class="kv"><div class="k">Intervention (h)</div><div id="p_interventionH">—</div></div>
+        <div class="kv"><div class="k">Trajet A/R (h)</div><div id="p_trajetH">—</div></div>
+      </div>
+    </div>
+
+    <div class="box" style="margin:10px 0 0">
+      <div style="font-weight:700; margin-bottom:6px">Observations</div>
+      <div id="p_observations" style="white-space:pre-wrap"></div>
+    </div>
+    <div id="pdf-photos-section" class="box" style="margin:10px 0 0; display:none;">
+      <div style="font-weight:700; margin-bottom:6px">Photos</div>
+      <div id="p_photosGrid" class="pdf-photos-grid"></div>
+    </div>
+
+    <div class="pdf-row" style="align-items:flex-start">
+      <div class="pdf-col box">
+        <div style="font-weight:700; margin-bottom:6px">Note du client</div>
+        <div id="p_noteTxt" class="muted" style="margin-bottom:4px">—</div>
+        <div id="p_stars" class="pdf-stars">☆☆☆☆☆☆☆☆☆☆</div>
+      </div>
+      <div class="pdf-col"></div>
+    </div>
+
+    <div class="pdf-row">
+      <div class="pdf-col">
+        <div style="font-weight:700; margin:8px 0 6px">Signature Client</div>
+        <div class="sig-box"><img id="p_sigClient" alt=""></div>
+      </div>
+      <div class="pdf-col">
+        <div style="font-weight:700; margin:8px 0 6px">Signature Technicien</div>
+        <div class="sig-box"><img id="p_sigTech" alt=""></div>
+      </div>
+    </div>
+
+    <div class="pdf-footer">
+      <div>Vrakie • Rapport d’intervention<div class="bar"></div></div>
+    </div>
+  </div>
+  <div id="handoffModal" class="modal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-title">Déplacer sur téléphone</div>
+      <div class="modal-sub">Scanne le QR avec ton téléphone ou copie le lien pour reprendre là où tu en étais.</div>
+      <div class="warn">Le lien n’inclut pas les <b>photos</b> ni les <b>signatures</b> (pour rester court). Utilise “Exporter JSON” si tu dois tout transférer.</div>
+      <div class="qr-wrap"><div id="handoffQR"></div></div>
+      <div id="handoffLink" class="linkbox"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" id="copyLinkBtn">Copier le lien</button>
+        <button class="btn btn-primary" type="button" id="closeHandoffBtn">Fermer</button>
+      </div>
+    </div>
+  </div>
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+  <script>
+    const $ = sel => document.querySelector(sel);
+    const safe = v => (v==null || String(v).trim()==='' ? '—' : String(v).trim());
+    const todayISO = () => new Date().toISOString().slice(0,10);
+    const noteCaption = n => n===0?'Aucune évaluation': n<=2?'Très insuffisant': n<=4?'Peut mieux faire': n<=6?'Correct': n<=8?'Bien': n<=9?'Très bien':'Excellent';
+    const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    let noteValue = 0;
+    const starsRoot = $('#stars');
+    function renderStars(n){
+      starsRoot.innerHTML = '';
+      for(let i=1;i<=10;i++){
+        const s = document.createElement('div');
+        s.className = 'star' + (i<=n?' filled':''); s.textContent = i<=n?'★':'☆'; s.dataset.val = i;
+        starsRoot.appendChild(s);
+      }
+      $('#noteLabel').textContent = `Note : ${n}/10`;
+      $('#noteCaption').textContent = noteCaption(n);
+    }
+    starsRoot.addEventListener('click', e=>{
+      const v = Number(e.target?.dataset?.val || 0); if(!v) return; noteValue = v; renderStars(noteValue);
+    });
+    let dragging = false;
+    const starDrag = (clientX)=>{
+      const rect = starsRoot.getBoundingClientRect();
+      const rel = Math.max(0, Math.min(rect.width, clientX - rect.left));
+      const idx = Math.min(10, Math.max(0, Math.ceil((rel/rect.width)*10)));
+      if(idx !== noteValue){ noteValue = idx; renderStars(noteValue); }
+    };
+    starsRoot.addEventListener('pointerdown', e=>{ dragging = true; starsRoot.setPointerCapture(e.pointerId); starDrag(e.clientX); });
+    starsRoot.addEventListener('pointermove', e=>{ if(dragging) starDrag(e.clientX); });
+    starsRoot.addEventListener('pointerup', e=>{ dragging=false; starsRoot.releasePointerCapture(e.pointerId); });
+    starsRoot.addEventListener('pointercancel', ()=> dragging=false);
+
+    function attachSignature(canvas){
+      const ctx = canvas.getContext('2d',{willReadFrequently:true});
+      let drawing = false, last=null;
+      const DPR = Math.max(1, window.devicePixelRatio || 1);
+      function resize(){
+        const {width, height} = canvas.getBoundingClientRect();
+        canvas.width = Math.floor(width*DPR);
+        canvas.height = Math.floor(height*DPR);
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.scale(DPR, DPR);
+        ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+        ctx.strokeStyle = '#E8ECF1';
+      }
+      resize(); new ResizeObserver(resize).observe(canvas);
+
+      const pos = e => e.touches?.[0] ? {x:e.touches[0].clientX, y:e.touches[0].clientY} : {x:e.clientX, y:e.clientY};
+      const toLocal = p => { const r = canvas.getBoundingClientRect(); return {x:p.x - r.left, y:p.y - r.top}; };
+
+      canvas.addEventListener('pointerdown', e=>{ drawing=true; last=toLocal(pos(e)); e.preventDefault(); canvas.setPointerCapture(e.pointerId); });
+      canvas.addEventListener('pointermove', e=>{
+        if(!drawing) return;
+        const p = toLocal(pos(e));
+        ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+        last=p; e.preventDefault();
+      });
+      canvas.addEventListener('pointerup', e=>{ drawing=false; canvas.releasePointerCapture(e.pointerId); });
+      canvas.addEventListener('pointerleave', ()=> drawing=false);
+
+      function toDataURL(){ return canvas.toDataURL('image/png'); }
+      function toDataURLBlack(){
+        const w = canvas.width, h = canvas.height;
+        const off = document.createElement('canvas'); off.width = w; off.height = h;
+        const octx = off.getContext('2d',{willReadFrequently:true});
+        octx.drawImage(canvas,0,0);
+        const img = octx.getImageData(0,0,w,h), d = img.data;
+        for(let i=0;i<d.length;i+=4){ const a = d[i+3]; if(a>16){ d[i]=0; d[i+1]=0; d[i+2]=0; } else { d[i+3]=0; } }
+        octx.putImageData(img,0,0);
+        return off.toDataURL('image/png');
+      }
+      return { clear(){ ctx.clearRect(0,0,canvas.width,canvas.height); }, toDataURL, toDataURLBlack };
+    }
+
+    $('#date').value = todayISO();
+    renderStars(0);
+
+    const sigClient = attachSignature($('#sigClient'));
+    const sigTech   = attachSignature($('#sigTech'));
+    $('#clearClient').onclick = ()=> sigClient.clear();
+    $('#clearTech').onclick   = ()=> sigTech.clear();
+    const addPhotoBtn = $('#addPhotoBtn');
+    const photosInput = $('#photosInput');
+    const photosList  = $('#photosList');
+    let photosData = [];
+
+    addPhotoBtn.addEventListener('click', () => photosInput.click());
+    photosInput.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files || []);
+      for (const f of files) {
+        if (!f.type.startsWith('image/')) continue;
+        const dataUrl = await fileToDataURL(f);
+        photosData.push({ name: f.name, url: dataUrl, comment: '' });
+      }
+      renderPhotosList();
+      photosInput.value = '';
+    });
+
+    function fileToDataURL(file){
+      return new Promise((res, rej)=>{
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+    }
+
+    function renderPhotosList(){
+      photosList.innerHTML = '';
+      photosData.forEach((p, idx) => {
+        const card = document.createElement('div');
+        card.className = 'photo-card';
+        card.innerHTML = `
+          <div class="photo-top">
+            <button class="photo-del" type="button" title="Supprimer" data-idx="${idx}">✕</button>
+            <img src="${p.url}" alt="">
+          </div>
+          <div class="photo-meta">
+            <div class="photo-name" title="${p.name}">${p.name}</div>
+            <input class="photo-comment" type="text" placeholder="Commentaire (optionnel)" data-idx="${idx}" value="${(p.comment||'').replace(/"/g,'&quot;')}">
+          </div>
+        `;
+        photosList.appendChild(card);
+      });
+    }
+
+    photosList.addEventListener('click', (e)=>{
+      const btn = e.target.closest('.photo-del');
+      if (btn){
+        const idx = Number(btn.dataset.idx);
+        if (Number.isInteger(idx)) { photosData.splice(idx, 1); renderPhotosList(); }
+      }
+    });
+    photosList.addEventListener('input', (e)=>{
+      const input = e.target.closest('.photo-comment'); if (!input) return;
+      const idx = Number(input.dataset.idx);
+      if (Number.isInteger(idx) && photosData[idx]){ photosData[idx].comment = input.value; }
+    });
+
+    function fillPdfTemplate(){
+      const safeVal = id => $('#'+id).value?.trim();
+      const setText = (id, v) => $('#'+id).textContent = safe(v);
+      setText('p_client', safeVal('client'));
+      setText('p_adresse', safeVal('adresse'));
+      setText('p_km', safeVal('km'));
+      setText('p_type', safeVal('type'));
+      setText('p_date', safeVal('date'));
+      setText('p_appel', safeVal('appel'));
+      setText('p_affaire', safeVal('affaire'));
+      setText('p_commande', safeVal('commande'));
+      setText('p_arrivee', safeVal('arrivee'));
+      setText('p_depart', safeVal('depart'));
+      setText('p_interventionH', safeVal('interventionH'));
+      setText('p_trajetH', safeVal('trajetH'));
+      $('#p_observations').textContent = safe($('#observations').value);
+      $('#p_noteTxt').textContent = `Note : ${noteValue}/10 — ${noteCaption(noteValue)}`;
+      $('#p_stars').textContent = '★'.repeat(noteValue) + '☆'.repeat(10-noteValue);
+
+      const c = sigClient.toDataURLBlack(), t = sigTech.toDataURLBlack();
+      $('#p_sigClient').src = c; $('#p_sigTech').src = t;
+
+      const section = $('#pdf-photos-section');
+      const grid = $('#p_photosGrid');
+      grid.innerHTML = '';
+      if (photosData.length > 0) {
+        section.style.display = '';
+        photosData.forEach(p => {
+          const cell = document.createElement('div'); cell.className = 'pdf-photo';
+          const img = document.createElement('img'); img.src = p.url; img.alt = '';
+          const cap = document.createElement('div'); cap.className = 'pdf-caption';
+          cap.textContent = (p.comment && p.comment.trim()) ? p.comment.trim() : p.name;
+          cell.appendChild(img); cell.appendChild(cap); grid.appendChild(cell);
+        });
+      } else {
+        section.style.display = 'none';
+      }
+    }
+
+    function waitForImagesLoaded(root){
+      const imgs = Array.from(root.querySelectorAll('img'));
+      const pending = imgs.filter(img => !img.complete || img.naturalWidth===0);
+      if (pending.length === 0) return Promise.resolve();
+      return Promise.all(pending.map(img => new Promise(res=>{
+        img.onload = img.onerror = () => res();
+      })));
+    }
+
+    async function buildPreviewCanvas(){
+      const node = $('#pdf-template');
+      await waitForImagesLoaded(node);
+      return await html2canvas(node, {scale:1, backgroundColor:'#fff'});
+    }
+
+    $('#previewBtn').addEventListener('click', async ()=>{
+      fillPdfTemplate();
+      const canvas = await buildPreviewCanvas();
+      const data = canvas.toDataURL('image/png');
+      const w = window.open('');
+      w.document.write(`<title>Aperçu PNG</title><img src="${data}" style="max-width:100%;height:auto;display:block;margin:0 auto;"/>`);
+    });
+
+    $('#shareBtn').addEventListener('click', async ()=>{
+      fillPdfTemplate();
+      const canvas = await buildPreviewCanvas();
+      const dataUrl = canvas.toDataURL('image/png');
+      const pngBlob = await (await fetch(dataUrl)).blob();
+      const file = new File([pngBlob], 'Apercu_Rapport.png', { type:'image/png' });
+
+      if (navigator.canShare && navigator.canShare({ files:[file] })) {
+        try { await navigator.share({ title: 'Aperçu Rapport (PNG)', text: 'Aperçu du rapport d’intervention', files:[file] }); return; }
+        catch(e){ }
+      }
+      const url = URL.createObjectURL(pngBlob);
+      const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.click();
+      setTimeout(()=>URL.revokeObjectURL(url), 60000);
+    });
+
+    (function setupButtons(){
+      const preview = $('#previewBtn'); const share = $('#shareBtn');
+      if (isIOS()) { preview.classList.add('hidden'); share.classList.remove('hidden'); }
+      else { share.classList.add('hidden'); preview.classList.remove('hidden'); }
+    })();
+    function base64urlEncode(bytes){
+      let bin = '';
+      for (const b of bytes) bin += String.fromCharCode(b);
+      return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    }
+    function base64urlDecode(str){
+      str = str.replace(/-/g,'+').replace(/_/g,'/');
+      while (str.length % 4) str += '=';
+      const bin = atob(str);
+      const out = new Uint8Array(bin.length);
+      for (let i=0;i<bin.length;i++) out[i] = bin.charCodeAt(i);
+      return out;
+    }
+
+    function getLightState(){
+      return {
+        v:1,
+        ts: Date.now(),
+        fields:{
+          type: $('#type').value,
+          date: $('#date').value,
+          client: $('#client').value,
+          adresse: $('#adresse').value,
+          appel: $('#appel').value,
+          affaire: $('#affaire').value,
+          commande: $('#commande').value,
+          km: $('#km').value,
+          arrivee: $('#arrivee').value,
+          depart: $('#depart').value,
+          interventionH: $('#interventionH').value,
+          trajetH: $('#trajetH').value,
+          observations: $('#observations').value,
+          noteValue
+        }
+      };
+    }
+
+    function applyLightState(state){
+      if(!state || !state.fields) return;
+      const f = state.fields;
+      $('#type').value = f.type || $('#type').value;
+      $('#date').value = f.date || $('#date').value;
+      $('#client').value = f.client || '';
+      $('#adresse').value = f.adresse || '';
+      $('#appel').value = f.appel || '';
+      $('#affaire').value = f.affaire || '';
+      $('#commande').value = f.commande || '';
+      $('#km').value = f.km || '';
+      $('#arrivee').value = f.arrivee || '';
+      $('#depart').value = f.depart || '';
+      $('#interventionH').value = f.interventionH || '';
+      $('#trajetH').value = f.trajetH || '';
+      $('#observations').value = f.observations || '';
+      noteValue = Number(f.noteValue||0); renderStars(noteValue);
+    }
+
+function makeHandoffURL(){
+  const json = JSON.stringify(getLightState());
+  const compressed = LZString.compressToEncodedURIComponent(json);
+  const url = new URL(window.location.href);
+  url.hash = 'handoffz=' + compressed;  
+  return url.toString();
+}
+(function resumeFromHash(){
+  const h = location.hash || '';
+
+  const mz = h.match(/handoffz=([^&]+)/);
+  if (mz) {
+    try{
+      const text = LZString.decompressFromEncodedURIComponent(mz[1]);
+      const state = JSON.parse(text);
+      applyLightState(state);
+      history.replaceState(null,'', location.pathname + location.search);
+      const toast = document.createElement('div');
+      toast.textContent = 'Formulaire repris depuis le lien 📱';
+      toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1F2937;border:1px solid rgba(255,255,255,.15);color:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:9999';
+      document.body.appendChild(toast);
+      setTimeout(()=>toast.remove(), 2000);
+      return;
+    }catch(e){}
+  }
+  const m = h.match(/handoff=([A-Za-z0-9\-\_]+)/);
+  if (m) {
+    try{
+      const bytes = base64urlDecode(m[1]);
+      const text = new TextDecoder().decode(bytes);
+      const state = JSON.parse(text);
+      applyLightState(state);
+      history.replaceState(null,'', location.pathname + location.search);
+      const toast = document.createElement('div');
+      toast.textContent = 'Formulaire repris depuis le lien 📱';
+      toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1F2937;border:1px solid rgba(255,255,255,.15);color:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.35);z-index:9999';
+      document.body.appendChild(toast);
+      setTimeout(()=>toast.remove(), 2000);
+    }catch(e){}
+  }
+})();
+function drawQR(el, text, size = 320, margin = 8, dark = '#000', light = '#fff') {
+  function makeModel(tn) {
+    const ECC_L = 1;
+    const qr = new QRCode(tn, ECC_L);
+    qr.addData(text);
+    qr.make();
+    return qr;
+  }
+
+  let qr;
+  for (let tn of [4, 6, 8, 10, 12, 14]) {
+    try { qr = makeModel(tn); break; } catch (e) {  }
+  }
+  if (!qr) qr = makeModel(16);
+
+  const count = qr.getModuleCount();
+  const cell = Math.floor((size - 2*margin) / count);
+  const dim = cell * count + 2*margin;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = dim;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = light;
+  ctx.fillRect(0, 0, dim, dim);
+  ctx.fillStyle = dark;
+  for (let r = 0; r < count; r++) {
+    for (let c = 0; c < count; c++) {
+      if (qr.isDark(c, r)) {
+        ctx.fillRect(margin + c*cell, margin + r*cell, cell, cell);
+      }
+    }
+  }
+  el.innerHTML = '';
+  el.appendChild(canvas);
+}
+function openHandoffModal(link){
+  const modal   = $('#handoffModal');
+  const linkBox = $('#handoffLink');
+  const qrBox   = $('#handoffQR');
+
+  linkBox.textContent = link;
+  qrBox.innerHTML = ''; 
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden','false');
+  const DPR = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+  const QUIET = 16;       
+  const MIN_CELL = 4;      
+  const MIN_SIZE = 320;      
+  const MAX_SIZE = 960;     
+  let size = link.length < 220 ? 360
+          : link.length < 380 ? 420
+          : link.length < 560 ? 520
+          : 640;
+
+  size = Math.min(MAX_SIZE, Math.max(MIN_SIZE, size));
+  function renderAt(cssSize){
+    qrBox.innerHTML = '';
+    const qr = new QRCode(qrBox, {
+      text: link,
+      width: cssSize * DPR, 
+      height: cssSize * DPR,
+      correctLevel: QRCode.CorrectLevel.L
+    });
+    const canvas = qrBox.querySelector('canvas');
+    if (canvas) {
+      canvas.style.width  = cssSize + 'px';
+      canvas.style.height = cssSize + 'px';
+    }
+    return qr;
+  }
+  let qr = renderAt(size);
+
+  try {
+    const count = qr._oQRCode.getModuleCount();      
+    const canvas = qrBox.querySelector('canvas');
+    const cellCss = (size - 2*QUIET) / count;         
+    if (cellCss < MIN_CELL && size < MAX_SIZE) {
+      const needed = Math.ceil(count * MIN_CELL + 2*QUIET);
+      size = Math.min(MAX_SIZE, needed);
+      qr = renderAt(size);
+    }
+  } catch(e) {
+    console.warn('Densité non mesurable, rendu par défaut.', e);
+  }
+
+  $('#closeHandoffBtn').onclick = ()=>{
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden','true');
+  };
+  $('#copyLinkBtn').onclick = async ()=>{
+    try {
+      await navigator.clipboard.writeText(link);
+      $('#copyLinkBtn').textContent = 'Copié !';
+      setTimeout(()=>$('#copyLinkBtn').textContent='Copier le lien',1200);
+    } catch {}
+  };
+}
+
+    $('#handoffBtn').addEventListener('click', ()=>{
+      const link = makeHandoffURL();
+      openHandoffModal(link);
+    });
+    function getFullState(){
+      return {
+        v:1, ts: Date.now(),
+        fields:{
+          type: $('#type').value,
+          date: $('#date').value,
+          client: $('#client').value,
+          adresse: $('#adresse').value,
+          appel: $('#appel').value,
+          affaire: $('#affaire').value,
+          commande: $('#commande').value,
+          km: $('#km').value,
+          arrivee: $('#arrivee').value,
+          depart: $('#depart').value,
+          interventionH: $('#interventionH').value,
+          trajetH: $('#trajetH').value,
+          observations: $('#observations').value,
+          noteValue
+        },
+        photos: photosData, 
+        signatures:{
+          client: sigClient.toDataURL(),
+          tech: sigTech.toDataURL()
+        }
+      };
+    }
+
+    function applyFullState(data){
+      applyLightState(data);
+      if(data.photos && Array.isArray(data.photos)){ photosData = data.photos; renderPhotosList(); }
+      if(data.signatures){
+        const imgToCanvas = (dataUrl, canvas) => new Promise(res=>{
+          const img = new Image(); img.onload = ()=>{ 
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            const r = canvas.getBoundingClientRect();
+            const tmp = document.createElement('canvas');
+            tmp.width = r.width; tmp.height = r.height;
+            const tctx = tmp.getContext('2d');
+            tctx.drawImage(img,0,0,tmp.width,tmp.height);
+            ctx.drawImage(tmp,0,0,canvas.width,canvas.height);
+            res();
+          };
+          img.onerror = ()=>res();
+          img.src = dataUrl;
+        });
+        imgToCanvas(data.signatures.client, $('#sigClient'));
+        imgToCanvas(data.signatures.tech, $('#sigTech'));
+      }
+    }
+
+    $('#exportBtn').addEventListener('click', ()=>{
+      const state = getFullState();
+      const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `intervention_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 60000);
+    });
+
+    $('#importBtn').addEventListener('click', ()=> $('#importInput').click());
+    $('#importInput').addEventListener('change', async (e)=>{
+      const f = e.target.files?.[0]; if(!f) return;
+      try{
+        const text = await f.text();
+        const data = JSON.parse(text);
+        applyFullState(data);
+      }catch(err){ alert('Fichier invalide.'); }
+      e.target.value = '';
+    });
+  </script>
+</body>
+</html>
